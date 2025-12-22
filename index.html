@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clean Up Together - Environmental Community Project</title>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.140.0/build/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.2/dist/gsap.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Poppins', sans-serif;
+        }
+        /* Ẩn hoàn toàn thanh cuộn (scrollbar) trên mọi trình duyệt */
+        html, body {
+            overflow-x: hidden;
+            scrollbar-width: none; /* Firefox */
+        }
+        body::-webkit-scrollbar {
+            display: none; /* Chrome, Safari, Edge */
+        }
+        body {
+            -ms-overflow-style: none; /* IE and Edge cũ */
+            background: linear-gradient(135deg, #1a3a1a 0%, #2d5a2d 50%, #1a3a1a 100%);
+            color: #ffffff;
+            cursor: none !important;
+        }
+        /* Custom Cursor đơn giản */
+        #custom-cursor {
+            position: fixed;
+            width: 20px;
+            height: 20px;
+            border: 2px solid #4ade80;
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 9999;
+            mix-blend-mode: difference;
+            transform: translate(-50%, -50%);
+            transition: transform 0.2s ease, width 0.3s ease, height 0.3s ease, background 0.3s ease;
+        }
+        .cursor-hover {
+            width: 40px !important;
+            height: 40px !important;
+            background: rgba(74, 222, 128, 0.3) !important;
+        }
+        .card-3d {
+            transform-style: preserve-3d;
+            transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+        }
+        .card-3d:hover { transform: translateY(-10px) rotateX(8deg) rotateY(8deg); }
+        .fade-in { opacity: 0; transform: translateY(40px); transition: opacity 1s ease, transform 1s ease; }
+        .fade-in.visible { opacity: 1; transform: translateY(0); }
+        .stats-counter {
+            font-size: 4.5rem;
+            font-weight: bold;
+            color: #4ade80;
+            text-shadow: 0 0 25px rgba(74, 222, 128, 0.6);
+        }
+        .leaf-particle {
+            position: absolute;
+            opacity: 0.5;
+            pointer-events: none;
+            animation: float 20s infinite linear;
+            user-select: none;
+        }
+        @keyframes float {
+            0% { transform: translateY(100vh) rotate(0deg); opacity: 0; }
+            10% { opacity: 0.5; }
+            90% { opacity: 0.5; }
+            100% { transform: translateY(-100px) rotate(360deg); opacity: 0; }
+        }
+        #intro-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: linear-gradient(135deg, #1a3a1a, #2d5a2d);
+            z-index: 99999;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        #intro-overlay h1 { font-size: 6rem; font-weight: 700; color: #4ade80; opacity: 0; transform: translateY(50px); }
+        #intro-overlay p { font-size: 2rem; color: #a7f3d0; opacity: 0; transform: translateY(30px); }
+        /* Team Member Cards - LED Rainbow Border */
+        .team-card {
+            position: relative;
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(12px);
+            border-radius: 24px;
+            padding: 32px;
+            text-align: center;
+            overflow: hidden;
+        }
+        .team-card::before {
+            content: '';
+            position: absolute;
+            inset: -3px;
+            background: conic-gradient(from 0deg, #ff0000, #ff7300, #fffb00, #48ff00, #00ffd5, #002bff, #ff00c8, #ff0000);
+            border-radius: 28px;
+            animation: rainbow 8s linear infinite;
+            z-index: -1;
+        }
+        .team-card::after {
+            content: '';
+            position: absolute;
+            inset: 3px;
+            background: linear-gradient(135deg, rgba(26,58,26,0.9), rgba(45,90,45,0.9));
+            border-radius: 24px;
+            z-index: -1;
+        }
+        @keyframes rainbow {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        /* Project Lead Card */
+        .project-lead-card {
+            grid-column: 1 / -1;
+            position: relative;
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(12px);
+            border-radius: 32px;
+            padding: 40px;
+            text-align: center;
+            overflow: hidden;
+        }
+        .project-lead-card::before {
+            content: '';
+            position: absolute;
+            inset: -5px;
+            background: conic-gradient(from 0deg, #ff0000, #ff7300, #fffb00, #48ff00, #00ffd5, #002bff, #ff00c8, #ff0000);
+            border-radius: 36px;
+            animation: rainbow 6s linear infinite;
+            z-index: -1;
+        }
+        .project-lead-card::after {
+            content: '';
+            position: absolute;
+            inset: 5px;
+            background: linear-gradient(135deg, rgba(22,163,74,0.9), rgba(34,197,94,0.9));
+            border-radius: 32px;
+            z-index: -1;
+        }
+        /* Real-time Clock */
+        #eco-clock {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(0,0,0,0.4);
+            padding: 12px 24px;
+            border-radius: 50px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(74,222,128,0.3);
+            font-size: 1.1rem;
+            font-weight: 500;
+            z-index: 9998;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+        }
+        /* Decorative Trees */
+        .decor-tree {
+            position: absolute;
+            font-size: 180px;
+            opacity: 0.15;
+            pointer-events: none;
+            user-select: none;
+            animation: sway 20s ease-in-out infinite alternate;
+            z-index: 0;
+        }
+        .tree-left {
+            left: -80px;
+            bottom: -50px;
+            transform: rotate(-15deg);
+        }
+        .tree-right {
+            right: -80px;
+            bottom: -50px;
+            transform: rotate(15deg);
+        }
+        @keyframes sway {
+            0% { transform: rotate(-15deg) translateY(0); }
+            100% { transform: rotate(-15deg) translateY(-20px); }
+        }
+        .tree-right { animation: sway-right 22s ease-in-out infinite alternate; }
+        @keyframes sway-right {
+            0% { transform: rotate(15deg) translateY(0); }
+            100% { transform: rotate(15deg) translateY(-20px); }
+        }
+        .team-section-wrapper {
+            position: relative;
+            overflow: hidden;
+        }
+        /* Social Icons - Góc trái trên */
+        #social-icons {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            display: flex;
+            gap: 16px;
+            background: rgba(0,0,0,0.4);
+            padding: 10px 16px;
+            border-radius: 50px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(74,222,128,0.3);
+            z-index: 9998;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+        }
+        .social-icon {
+            font-size: 24px;
+            color: #ffffff;
+            transition: transform 0.3s ease, color 0.3s ease;
+        }
+        .social-icon:hover {
+            transform: scale(1.4) translateY(-4px);
+            color: #4ade80;
+        }
+        /* Love Button & Thank You Animation */
+        #love-btn {
+            margin-top: 30px;
+            padding: 14px 32px;
+            background: linear-gradient(45deg, #ed4956, #f472b6);
+            border: none;
+            border-radius: 50px;
+            color: white;
+            font-size: 1.5rem;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 10px 30px rgba(237,73,86,0.4);
+            transition: transform 0.3s ease;
+        }
+        #love-btn:hover {
+            transform: scale(1.1);
+        }
+        #thank-you-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.7);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+            pointer-events: none;
+        }
+        #thank-you-content {
+            text-align: center;
+            opacity: 0;
+        }
+        #thank-you-content span {
+            font-size: 8rem;
+            display: block;
+            animation: floatHeart 3s ease-in-out forwards;
+        }
+        #thank-you-content p {
+            font-size: 3rem;
+            font-weight: bold;
+            color: #4ade80;
+            margin-top: 20px;
+        }
+        @keyframes floatHeart {
+            0% { transform: translateY(100px) scale(0); opacity: 0; }
+            50% { transform: translateY(-30px) scale(1.2); opacity: 1; }
+            100% { transform: translateY(-60px) scale(1); opacity: 0; }
+        }
+        /* Instagram Posts */
+        .ig-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+            gap: 30px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        .ig-post-new {
+            background: white;
+            color: #000;
+            border-radius: 24px;
+            overflow: hidden;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+            opacity: 0;
+            transform: translateX(-50px);
+            transition: opacity 0.8s ease, transform 0.8s ease;
+        }
+        .ig-post-new.visible {
+            opacity: 1;
+            transform: translateX(0);
+        }
+        .ig-header { display: flex; align-items: center; padding: 16px; gap: 12px; }
+        .ig-avatar { width: 44px; height: 44px; border-radius: 50%; background: linear-gradient(45deg, #4ade80, #22c55e); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 18px; }
+        .ig-image { width: 100%; aspect-ratio: 1/1; object-fit: cover; }
+        .ig-actions { padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; }
+        .ig-left-actions { display: flex; gap: 16px; }
+        .ig-action-btn { font-size: 28px; cursor: pointer; transition: transform 0.2s; }
+        .ig-action-btn:hover { transform: scale(1.15); }
+        .ig-action-btn.liked { color: #ed4956; animation: heartBeat 0.6s ease; }
+        @keyframes heartBeat { 0% { transform: scale(1); } 50% { transform: scale(1.4); } 100% { transform: scale(1); } }
+        .ig-likes { padding: 0 16px 8px; font-weight: 600; }
+        .ig-caption { padding: 0 16px 12px; line-height: 1.5; }
+        .ig-time { padding: 0 16px 12px; font-size: 12px; color: #8e8e8e; }
+        @media (max-width: 768px) {
+            #intro-overlay h1 { font-size: 4rem; }
+            #intro-overlay p { font-size: 1.5rem; }
+            .stats-counter { font-size: 3.5rem; }
+            #eco-clock { top: 15px; right: 15px; padding: 10px 18px; font-size: 1rem; }
+            #social-icons { top: 15px; left: 15px; padding: 8px 12px; gap: 12px; }
+            .social-icon { font-size: 20px; }
+            .decor-tree { display: none; }
+            .ig-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Social Icons - Góc trái trên -->
+    <div id="social-icons">
+        <a href="#" class="social-icon"><i class="fab fa-youtube"></i></a>
+        <a href="#" class="social-icon"><i class="fab fa-tiktok"></i></a>
+        <a href="#" class="social-icon"><i class="fab fa-facebook"></i></a>
+        <a href="#" class="social-icon"><i class="fab fa-instagram"></i></a>
+        <a href="#" class="social-icon"><i class="fas fa-envelope"></i></a>
+    </div>
+
+    <!-- Real-time Eco Clock (Việt Nam) -->
+    <div id="eco-clock" class="text-green-300">
+        <span id="clock-time"></span> | Việt Nam
+    </div>
+
+    <!-- Intro Animation -->
+    <div id="intro-overlay">
+        <h1>Clean Up Together</h1>
+        <p>Small actions – Big impact 🌍</p>
+    </div>
+
+    <!-- Custom Cursor -->
+    <div id="custom-cursor"></div>
+
+    <!-- Leaf Particles -->
+    <div id="leafParticles"></div>
+
+    <!-- Hero Section -->
+    <section id="hero" class="relative h-screen flex items-center justify-center overflow-hidden">
+        <div class="absolute inset-0" id="heroCanvas"></div>
+        <div class="relative z-10 text-center px-6 opacity-0" id="heroText">
+            <h1 class="text-6xl md:text-8xl font-bold mb-6 text-transparent bg-clip-text bg-gradient-to-r from-green-400 via-emerald-500 to-green-600">
+                Clean Up Together
+            </h1>
+            <p class="text-xl md:text-3xl text-green-300 mb-12 tracking-wide">Small actions – Big impact</p>
+            <div class="fade-in">
+                <p class="text-2xl md:text-3xl mb-6 text-green-200">My Luv</p>
+                <div class="flex items-center justify-center gap-6 flex-wrap mb-12">
+                    <span class="text-6xl animate-pulse">❤️</span>
+                    <span id="heartTotal" class="stats-counter">0</span>
+                    <span class="text-2xl md:text-3xl text-green-200">Supported</span>
+                </div>
+                <p class="text-xl md:text-2xl text-green-300 mb-8 fade-in">Project Duration: 1 Week Campaign</p>
+                <!-- Love Button -->
+                <button id="love-btn">Click Me!!!❤️</button>
+            </div>
+        </div>
+    </section>
+
+    <!-- Thank You Overlay -->
+    <div id="thank-you-overlay">
+        <div id="thank-you-content">
+            <span>❤️</span>
+            <p>THANK YOU!</p>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <main class="container mx-auto px-6 py-20 max-w-7xl">
+        <!-- Project Overview -->
+        <section class="mb-24">
+            <h2 class="text-4xl md:text-5xl font-bold text-center mb-16 text-green-400 fade-in">Project Overview</h2>
+            <div class="grid md:grid-cols-3 gap-10">
+                <div class="card-3d bg-gradient-to-br from-green-800/80 to-green-900/90 backdrop-blur-md rounded-2xl p-10 fade-in">
+                    <div class="text-6xl mb-6">🌱</div>
+                    <h3 class="text-3xl font-semibold mb-4">Our Mission</h3>
+                    <p class="text-green-200 leading-relaxed">To unite communities in preserving our environment through collective clean-up initiatives and sustainable practices.</p>
+                </div>
+                <div class="card-3d bg-gradient-to-br from-green-800/80 to-green-900/90 backdrop-blur-md rounded-2xl p-10 fade-in" style="animation-delay: 0.2s">
+                    <div class="text-6xl mb-6">🌍</div>
+                    <h3 class="text-3xl font-semibold mb-4">Why It Matters</h3>
+                    <p class="text-green-200 leading-relaxed">Clean public spaces improve health, boost community pride, and protect wildlife habitats for future generations.</p>
+                </div>
+                <div class="card-3d bg-gradient-to-br from-green-800/80 to-green-900/90 backdrop-blur-md rounded-2xl p-10 fade-in" style="animation-delay: 0.4s">
+                    <div class="text-6xl mb-6">🤝</div>
+                    <h3 class="text-3xl font-semibold mb-4">Community Impact</h3>
+                    <p class="text-green-200 leading-relaxed">Join thousands of volunteers making a tangible difference in neighborhoods worldwide.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Image Gallery -->
+        <section class="mb-24">
+            <h2 class="text-4xl md:text-5xl font-bold text-center mb-16 text-green-400 fade-in">Our Impact</h2>
+            <div class="grid md:grid-cols-3 gap-10">
+                <div class="card-3d rounded-2xl overflow-hidden shadow-2xl fade-in">
+                    <img src="https://picsum.photos/seed/cleanup1/800/600" alt="Beach Cleanup" class="w-full h-80 object-cover">
+                    <div class="p-6 bg-gradient-to-t from-black/70 to-transparent">
+                        <h4 class="text-2xl font-bold text-white">Street Cleanup</h4>
+                        <p class="text-green-200 mt-2">Cleaning streets and roadsides to keep the neighborhood tidy</p>
+                    </div>
+                </div>
+                <div class="card-3d rounded-2xl overflow-hidden shadow-2xl fade-in" style="animation-delay: 0.2s">
+                    <img src="https://picsum.photos/seed/cleanup2/800/600" alt="Park Cleanup" class="w-full h-80 object-cover">
+                    <div class="p-6 bg-gradient-to-t from-black/70 to-transparent">
+                        <h4 class="text-2xl font-bold text-white">Sidewalk Cleanup</h4>
+                        <p class="text-green-200 mt-2">Removing plastic bottles and trash from sidewalks</p>
+                    </div>
+                </div>
+                <div class="card-3d rounded-2xl overflow-hidden shadow-2xl fade-in" style="animation-delay: 0.4s">
+                    <img src="https://picsum.photos/seed/cleanup3/800/600" alt="River Cleanup" class="w-full h-80 object-cover">
+                    <div class="p-6 bg-gradient-to-t from-black/70 to-transparent">
+                        <h4 class="text-2xl font-bold text-white">Neighborhood Cleanup</h4>
+                        <p class="text-green-200 mt-2">Working together to create a cleaner living environment</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Team Introduction -->
+        <section class="mb-24 team-section-wrapper">
+            <h2 class="text-4xl md:text-5xl font-bold text-center mb-16 text-green-400 fade-in relative z-10">Meet Our Team</h2>
+            <div class="decor-tree tree-left">🌲</div>
+            <div class="decor-tree tree-right">🌳</div>
+
+            <div class="grid lg:grid-cols-3 md:grid-cols-2 gap-10 relative z-10">
+                <div class="project-lead-card card-3d fade-in">
+                    <img src="E:\ENGLISH PROJECT\BTHUY.jpg" alt="Lê Bình Thủy" class="w-48 h-48 rounded-full mx-auto mb-6 object-cover border-8 border-green-300 shadow-2xl">
+                    <h3 class="text-4xl font-bold mb-2">Lê Bình Thủy</h3>
+                    <p class="text-green-200 text-2xl font-medium">Project Leader & Founder</p>
+                    <p class="mt-4 text-green-100 italic text-lg">"Leading with passion for a greener tomorrow"</p>
+                </div>
+                <div class="team-card card-3d fade-in">
+                    <img src="E:\ENGLISH PROJECT\DA.jpg" alt="Vũ Mai Diệu Anh" class="w-36 h-36 rounded-full mx-auto mb-6 object-cover border-6 border-green-400 shadow-2xl">
+                    <h4 class="text-2xl font-semibold">Vũ Mai Diệu Anh</h4>
+                    <p class="text-green-300 text-lg mt-2">Member</p>
+                </div>
+                <div class="team-card card-3d fade-in" style="animation-delay: 0.2s">
+                    <img src="E:\ENGLISH PROJECT\BB.jpg" alt="Vũ Bắc Bình" class="w-36 h-36 rounded-full mx-auto mb-6 object-cover border-6 border-green-400 shadow-2xl">
+                    <h4 class="text-2xl font-semibold">Vũ Bắc Bình</h4>
+                    <p class="text-green-300 text-lg mt-2">Member</p>
+                </div>
+                <div class="team-card card-3d fade-in" style="animation-delay: 0.3s">
+                    <img src="E:\ENGLISH PROJECT\HK.jpg" alt="Nguyễn Hồng Kỳ" class="w-36 h-36 rounded-full mx-auto mb-6 object-cover border-6 border-green-400 shadow-2xl">
+                    <h4 class="text-2xl font-semibold">Nguyễn Hồng Kỳ</h4>
+                    <p class="text-green-300 text-lg mt-2">Member</p>
+                </div>
+                <div class="team-card card-3d fade-in" style="animation-delay: 0.4s">
+                    <img src="E:\ENGLISH PROJECT\kc.jpg" alt="Trịnh Kim Chi" class="w-36 h-36 rounded-full mx-auto mb-6 object-cover border-6 border-green-400 shadow-2xl">
+                    <h4 class="text-2xl font-semibold">Trịnh Kim Chi</h4>
+                    <p class="text-green-300 text-lg mt-2">Member</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Join the Movement -->
+        <section class="mb-32">
+            <h2 class="text-4xl md:text-5xl font-bold text-center mb-16 text-green-400 fade-in">Join the Movement</h2>
+            <div class="ig-grid">
+                <div class="ig-post-new fade-in">
+                    <div class="ig-header">
+                        <div class="ig-avatar">CT</div>
+                        <div>
+                            <div class="ig-username">cleanup_together</div>
+                            <div class="ig-location">Park Cleanup 🌳</div>
+                        </div>
+                    </div>
+                    <img src="E:\ENGLISH PROJECT\rac.png" alt="Park cleanup" class="ig-image">
+                    <div class="ig-actions">
+                        <div class="ig-left-actions">
+                            <i class="ig-action-btn heart far fa-heart" data-post="1"></i>
+                            <i class="ig-action-btn far fa-comment"></i>
+                            <i class="ig-action-btn far fa-paper-plane"></i>
+                        </div>
+                        <i class="ig-action-btn far fa-bookmark"></i>
+                    </div>
+                    <div class="ig-likes" id="likes1">312 likes</div>
+                    <div class="ig-caption"><strong>cleanup_together</strong> Results after 1 hour ❤️🌱✨#SONSTUNGMTP #CleanUpTogether #fyp </div>
+                    <div class="ig-time">5 days ago</div>
+                </div>
+
+                <div class="ig-post-new fade-in" style="animation-delay: 0.3s">
+                    <div class="ig-header">
+                        <div class="ig-avatar">CT</div>
+                        <div>
+                            <div class="ig-username">cleanup_together</div>
+                            <div class="ig-location">Cleanup</div>
+                        </div>
+                    </div>
+                    <img src="E:\ENGLISH PROJECT\rac2.png" alt="Beach cleanup" class="ig-image">
+                    <div class="ig-actions">
+                        <div class="ig-left-actions">
+                            <i class="ig-action-btn heart far fa-heart" data-post="2"></i>
+                            <i class="ig-action-btn far fa-comment"></i>
+                            <i class="ig-action-btn far fa-paper-plane"></i>
+                        </div>
+                        <i class="ig-action-btn far fa-bookmark"></i>
+                    </div>
+                    <div class="ig-likes" id="likes2">289 likes</div>
+                    <div class="ig-caption"><strong>cleanup_together</strong> Protect our sidewalks from plastic bottles ♻️ #SONSTUNGMTP#Clean_up_together #CleanUpTogether #xuhuong </div>
+                    <div class="ig-time">1 day ago</div>
+                </div>
+
+                <div class="ig-post-new fade-in" style="animation-delay: 0.6s">
+                    <div class="ig-header">
+                        <div class="ig-avatar">CT</div>
+                        <div>
+                            <div class="ig-username">cleanup_together</div>
+                            <div class="ig-location">Cleanup!</div>
+                        </div>
+                    </div>
+                    <img src="E:\ENGLISH PROJECT\clean.jpg" alt="Tree planting" class="ig-image">
+                    <div class="ig-actions">
+                        <div class="ig-left-actions">
+                            <i class="ig-action-btn heart far fa-heart" data-post="3"></i>
+                            <i class="ig-action-btn far fa-comment"></i>
+                            <i class="ig-action-btn far fa-paper-plane"></i>
+                        </div>
+                        <i class="ig-action-btn far fa-bookmark"></i>
+                    </div>
+                    <div class="ig-likes" id="likes3">456 likes</div>
+                    <div class="ig-caption"><strong>cleanup_together</strong> Small actions, big results after cleaning 🧹💚#SONSTUNGMTP#Clean_up_together #CleanUpTogether #xuhuong #C.RONALDO #CR7</div>
+                    <div class="ig-time">3 days ago</div>
+                </div>
+            </div>
+            <p class="text-center mt-16 text-green-300 text-3xl md:text-4xl font-medium fade-in">Protect the environment starting from the smallest actions #SONSTUNGMTP💚🍃</p>
+        </section>
+    </main>
+
+    <script>
+        // Intro Animation
+        gsap.timeline()
+            .to("#intro-overlay h1", { opacity: 1, y: 0, duration: 1.5, ease: "power3.out" })
+            .to("#intro-overlay p", { opacity: 1, y: 0, duration: 1, ease: "power3.out" }, "-=0.8")
+            .to("#intro-overlay", { y: "-100%", duration: 1.4, ease: "power3.inOut" }, "+=1")
+            .to("#heroText", { opacity: 1, duration: 1.8 }, "-=1.2");
+
+        // Real-time Clock
+        function updateClock() {
+            const now = new Date();
+            const options = { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false };
+            const timeString = now.toLocaleTimeString('vi-VN', options);
+            document.getElementById('clock-time').textContent = timeString;
+        }
+        updateClock();
+        setInterval(updateClock, 1000);
+
+        // Like counter
+        let globalLikes = 312 + 289 + 456;
+        const heartCounter = document.getElementById('heartTotal');
+        const counterObserver = new IntersectionObserver((entries) => {
+            if (entries[0].isIntersecting) {
+                gsap.to({val: 0}, { val: globalLikes, duration: 3, ease: "power2.out",
+                    onUpdate: function() { heartCounter.textContent = Math.floor(this.targets()[0].val).toLocaleString(); }
+                });
+                counterObserver.unobserve(heartCounter);
+            }
+        }, { threshold: 0.6 });
+        counterObserver.observe(heartCounter);
+
+        // Custom Cursor
+        const cursor = document.getElementById('custom-cursor');
+        let mouse = { x: 0, y: 0 };
+        let pos = { x: 0, y: 0 };
+        const updateCursor = () => {
+            pos.x += (mouse.x - pos.x) * 0.15;
+            pos.y += (mouse.y - pos.y) * 0.15;
+            cursor.style.left = pos.x + 'px';
+            cursor.style.top = pos.y + 'px';
+            requestAnimationFrame(updateCursor);
+        };
+        document.addEventListener('mousemove', (e) => {
+            mouse.x = e.clientX;
+            mouse.y = e.clientY;
+        });
+        document.querySelectorAll('a, button, .card-3d, .ig-action-btn, .ig-post-new, .social-icon').forEach(el => {
+            el.addEventListener('mouseenter', () => cursor.classList.add('cursor-hover'));
+            el.addEventListener('mouseleave', () => cursor.classList.remove('cursor-hover'));
+        });
+        updateCursor();
+
+        // Like buttons
+        document.querySelectorAll('.heart').forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                if (this.classList.contains('liked')) return;
+                this.classList.add('liked');
+                this.classList.replace('far', 'fas');
+                const postId = this.dataset.post;
+                const likesEl = document.getElementById('likes' + postId);
+                let count = parseInt(likesEl.textContent);
+                likesEl.textContent = (count + 1) + ' likes';
+                globalLikes++;
+                heartCounter.textContent = globalLikes.toLocaleString();
+            });
+        });
+
+        // Love Button - Thank You Animation
+        const loveBtn = document.getElementById('love-btn');
+        const thankYouOverlay = document.getElementById('thank-you-overlay');
+        const thankYouContent = document.getElementById('thank-you-content');
+
+        loveBtn.addEventListener('click', () => {
+            thankYouOverlay.style.display = 'flex';
+            thankYouContent.style.opacity = '1';
+
+            // Reset animation
+            thankYouContent.querySelector('span').style.animation = 'none';
+            thankYouContent.querySelector('span').offsetHeight; /* trigger reflow */
+            thankYouContent.querySelector('span').style.animation = 'floatHeart 3s ease-in-out forwards';
+
+            setTimeout(() => {
+                thankYouOverlay.style.display = 'none';
+                thankYouContent.style.opacity = '0';
+            }, 3000);
+        });
+
+        // 3D Hero Scene
+        const heroScene = () => {
+            const scene = new THREE.Scene();
+            const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            document.getElementById('heroCanvas').appendChild(renderer.domElement);
+
+            const particlesGeometry = new THREE.BufferGeometry();
+            const particlesCount = 4000;
+            const posArray = new Float32Array(particlesCount * 3);
+            for (let i = 0; i < particlesCount * 3; i++) {
+                posArray[i] = (Math.random() - 0.5) * 60;
+            }
+            particlesGeometry.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+
+            const particlesMaterial = new THREE.PointsMaterial({
+                size: 0.006,
+                color: 0x4ade80,
+                transparent: true,
+                opacity: 0.7,
+                blending: THREE.AdditiveBlending
+            });
+
+            const particlesMesh = new THREE.Points(particlesGeometry, particlesMaterial);
+            scene.add(particlesMesh);
+            camera.position.z = 6;
+
+            let mouseX3D = 0, mouseY3D = 0;
+            document.addEventListener('mousemove', (e) => {
+                mouseX3D = (e.clientX / window.innerWidth) * 2 - 1;
+                mouseY3D = -(e.clientY / window.innerHeight) * 2 + 1;
+            });
+
+            const animate = () => {
+                requestAnimationFrame(animate);
+                particlesMesh.rotation.y += 0.0008;
+                particlesMesh.rotation.x += 0.0004;
+                camera.position.x += (mouseX3D * 0.8 - camera.position.x) * 0.05;
+                camera.position.y += (mouseY3D * 0.8 - camera.position.y) * 0.05;
+                camera.lookAt(scene.position);
+                renderer.render(scene, camera);
+            };
+            animate();
+
+            window.addEventListener('resize', () => {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            });
+        };
+
+        // Leaf Particles
+        const createLeafParticles = () => {
+            const container = document.getElementById('leafParticles');
+            for (let i = 0; i < 25; i++) {
+                const leaf = document.createElement('div');
+                leaf.className = 'leaf-particle text-4xl';
+                leaf.innerHTML = '🍃';
+                leaf.style.left = Math.random() * 100 + 'vw';
+                leaf.style.animationDelay = Math.random() * 20 + 's';
+                leaf.style.animationDuration = (20 + Math.random() * 10) + 's';
+                container.appendChild(leaf);
+            }
+        };
+
+        // Scroll Fade In
+        const scrollAnimations = () => {
+            const elements = document.querySelectorAll('.fade-in');
+            const igPosts = document.querySelectorAll('.ig-post-new');
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('visible');
+                    }
+                });
+            }, { threshold: 0.15 });
+            elements.forEach(el => observer.observe(el));
+            igPosts.forEach(post => observer.observe(post));
+        };
+
+        // Init
+        document.addEventListener('DOMContentLoaded', () => {
+            heroScene();
+            createLeafParticles();
+            scrollAnimations();
+        });
+    </script>
+</body>
+</html>
